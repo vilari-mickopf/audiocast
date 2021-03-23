@@ -1,0 +1,56 @@
+#!/bin/bash
+
+[[ $# -gt 1 ]] && exit
+
+command=$1
+
+if [[ $# -eq 0 ]]; then
+    current_sink=$(pacmd list-sinks | grep index | tee /dev/stdout \
+                                    | grep -m1 '* index' \
+                                    | cut -c12-)
+
+    rtp_sink=$(pacmd list-sinks | grep -C 1 rtp \
+                                | grep index \
+                                | awk 'NF>1{print $NF}')
+
+    [[ $current_sink == $rtp_sink ]] && command=start || command=stop
+fi
+
+conf_dir=${XDG_CONFIG_HOME:-$HOME/.config}
+CONF=$conf_dir/audiocast/config
+TMP_FILE=$conf_dir/audiocast/.cache
+[[ ! -f $TMP_FILE ]] && touch $TMP_FILE
+
+home_essid=$(cat $CONF | grep "^home_essid" | cut -d= -f2 | tail -n1)
+current_essid=$(iwgetid -r)
+[[ $home_essid != '' && $current_essid != $home_essid ]] && exit
+
+port=$(cat $CONF | grep "^port" | cut -d= -f2 | tail -n1)
+ip=$(cat $TMP_FILE)
+ping -c 1 -W 0.1 $ip &>/dev/null
+[[ $? != 0 ]] && echo "Can't ping cached ip. Looking for port $port" && \
+    [[ -f $TMP_FILE ]] && rm $TMP_FILE
+route=$(ip route | sed '/default/d' | awk '{print $1}')
+[[ ! -s $TMP_FILE ]] && nmap $route -p$port --open -oG - \
+                            | awk "/Ports: $port\/open/{print \$2}" \
+                            | awk '{print $1}' > $TMP_FILE
+[[ ! -s $TMP_FILE ]] && "Can't find port ip addr with port $port." && exit
+
+ip=$(cat $TMP_FILE)
+[[ -z $ip ]] && echo Can\'t find ip addr && exit
+
+valid=(start stop)
+(printf '%s\n' "${valid[@]}" | grep -xq $command) || exit
+
+echo $command | timeout 0.1 nc $ip $port
+[[ $? == 1 ]] && echo "Command not successfully sent to the receiver." && \
+    command=stop && [[ -f $TMP_FILE ]] && rm $TMP_FILE
+
+module=$(pactl list short modules | grep 'module-rtp-send\ssource=rtp\.monitor' \
+                                  | awk '{print $1}')
+
+for m in $module; do
+    pactl unload-module $m
+done
+
+[[ $command == 'start' ]] && pactl load-module module-rtp-send source=rtp.monitor

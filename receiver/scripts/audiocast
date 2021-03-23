@@ -1,0 +1,19 @@
+#!/bin/bash
+
+conf_dir=${XDG_CONFIG_HOME:-$HOME/.config}
+CONF=$conf_dir/audiocast/config
+port=$(cat $CONF | grep "^port" | cut -d= -f2 | tail -n1)
+
+pactl set-sink-volume @DEFAULT_SINK@ 100%
+
+valid=(start stop)
+while : ; do
+    command=$(nc -l $port)
+    [[ -n $command ]] && (printf '%s\n' "${valid[@]}" | grep -xq $command) && \
+        module=$(pactl list short modules | grep 'module-rtp-recv' \
+                                          | awk '{ print $1 }')
+        for m in $module; do
+            pactl unload-module $m
+        done
+        [[ $command == 'start' ]] && pactl load-module module-rtp-recv
+done

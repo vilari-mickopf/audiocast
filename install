@@ -1,0 +1,54 @@
+#! /bin/bash
+
+help() {
+    echo "install, installing audiocast on server/receiver."
+    echo
+    echo "Basic usage:"
+    echo "install [options]"
+    echo
+    echo "Options:"
+    echo "  server      install on server"
+    echo "  receiver    install on receiver"
+}
+
+[[ $# -eq 0 || $# -gt 1 ]] && help && exit
+
+valid=(server receiver)
+(printf '%s\n' "${valid[@]}" | grep -xq $1) || { help && exit; }
+
+if [[ $1 == server ]]; then
+    conf_dir=${XDG_CONFIG_HOME:-$HOME/.config}
+    default_pulse_conf=$conf_dir/pulse/default.pa
+    [[ ! -f $default_pulse_conf ]] && default_pulse_conf=/etc/pulse/default.pa
+
+    pulse_conf='load-module module-null-sink sink_name=rtp'
+    [[ -z $(cat $default_pulse_conf | grep "^$pulse_conf") ]] && { \
+        [[ $default_pulse_conf == /etc/pulse/default.pa ]] && \
+            sudo echo $pulse_conf >> $default_pulse_conf || \
+            echo $pulse_conf >> $default_pulse_conf; }
+
+    systemctl --user restart pulseaudio
+
+    sudo cp server/scripts/* /usr/bin
+
+    mkdir -p $conf_dir/audiocast
+    cp server/config/* $conf_dir/audiocast
+
+elif [[ $1 == receiver ]]; then
+    sudo cp receiver/scripts/* /usr/bin
+    sudo cp receiver/systemd/* /etc/systemd/user
+
+    current_user=$USER
+    sudo loginctl enable-linger $current_user
+    systemctl --user daemon-reload
+
+    systemctl --user start pulseaudio
+    systemctl --user enable pulseaudio
+
+    systemctl --user start audiocast
+    systemctl --user enable audiocast
+
+    conf_dir=${XDG_CONFIG_HOME:-$HOME/.config}
+    mkdir -p $conf_dir/audiocast
+    cp receiver/config/* $conf_dir/audiocast
+fi
