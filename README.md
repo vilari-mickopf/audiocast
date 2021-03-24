@@ -11,10 +11,9 @@ Following packages are needed on both server and receiver sides:
 - pulseaudio-rtp
 - nmap
 - netcat
-- wireless_tools
 
 ```bash
-pacman -S pulseaudio pulseaudio-rtp nmap netcat wireless_tools
+pacman -S pulseaudio pulseaudio-rtp nmap netcat
 ```
 
 ## Installation

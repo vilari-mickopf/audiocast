@@ -21,10 +21,6 @@ CONF=$conf_dir/audiocast/config
 TMP_FILE=$conf_dir/audiocast/.cache
 [[ ! -f $TMP_FILE ]] && touch $TMP_FILE
 
-home_essid=$(cat $CONF | grep "^home_essid" | cut -d= -f2 | tail -n1)
-current_essid=$(iwgetid -r)
-[[ $home_essid != '' && $current_essid != $home_essid ]] && exit
-
 port=$(cat $CONF | grep "^port" | cut -d= -f2 | tail -n1)
 ip=$(cat $TMP_FILE)
 ping -c 1 -W 0.1 $ip &>/dev/null
