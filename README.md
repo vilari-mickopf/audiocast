@@ -1,6 +1,10 @@
 # Audiocast
 
-Rtp streaming audio over network using pulseaudio module-rtp.
+Streaming audio over network using pulseaudio module-rtp-send/module-rtp-recv.
+
+Set of small scripts for effortless loading/unloading modules from both sides simultaneously.
+Server will load/unload module-rtp-send and send start/stop commands ovet tcp port that was previosly opened by receiver.
+Receiver will continuously wait on the port for commands from the server which will load/unload module-rtp-recv.
 
 # Getting Started
 
@@ -45,9 +49,9 @@ port=5212
 
 Use same 'port' value on server and receiver side.
 
-## Usage
+# Usage
 
-### Server
+## Server
 
 - Start streaming:
 ```bash
@@ -75,7 +79,7 @@ bindsym $mod+Shift+m exec --no-startup-id changesink && audiocast
 - [changesink](https://github.com/vilari-mickopf/dotfiles/blob/master/.config/i3/scripts/changesink) script
 
 
-### Receiver
+## Receiver
 
 Audiocast on receiver side should continuously wait on port for server's command:
 
