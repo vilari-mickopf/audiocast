@@ -33,7 +33,7 @@ route=$(ip route | sed '/default/d' | awk '{print $1}')
 [[ ! -s $TMP_FILE ]] && "Can't find port ip addr with port $port." && exit
 
 ip=$(cat $TMP_FILE)
-[[ -z $ip ]] && echo Can\'t find ip addr && exit
+[[ -z $ip ]] && echo "Can\'t find ip addr" && exit
 
 valid=(start stop)
 (printf '%s\n' "${valid[@]}" | grep -xq $command) || exit
