@@ -1,6 +1,7 @@
 # Audiocast
 
-Rtp streaming audio over network using pulseaudio module-rtp.
+Rtp streaming audio over network using pulseaudio module-rtp and
+using tcp port for easier control of the stream.
 
 # Getting Started
 
@@ -20,7 +21,7 @@ pacman -S pulseaudio pulseaudio-rtp nmap netcat
 
 ### Server
 
-Server argument will add rtp sink to default.pa and install audiocast script
+Server argument will add rtp sink to default.pa and install audiocast server script
 
 ```bash
 ./install server
@@ -28,7 +29,7 @@ Server argument will add rtp sink to default.pa and install audiocast script
 
 ### Receiver
 
-Receiver argument will only install audiocast script
+Receiver argument will only install audiocast receiver script
 
 ```bash
 ./install receiver
@@ -43,24 +44,29 @@ $XDG_CONFIG_HOME/audiocast/config file.
 port=5212
 ```
 
-Use same 'port' value on server and receiver side.
+Use same 'port' value on server and receiver side
 
 ## Usage
 
 ### Server
 
-- Start streaming:
+- 'start' will load rtp-module if it's not already loaded
 ```bash
 audiocast start
 ```
 
-- Stop streaming
+- 'stop' will unload rtp-module
+```bash
+audiocast stop
+```
+
+- 'restart' will unload and then load rtp-module
 ```bash
 audiocast stop
 ```
 
 If no argument is provided, audiocast will determine the action based on current
-sink. If the current sink is rtp it will start streaming, otherwise it will stop.
+sink. If the current sink is rtp it will use 'start' command, otherwise it will exit.
 
 ```bash
 audiocast
@@ -71,13 +77,17 @@ stream with one same key:
 
 ```bash
 bindsym $mod+Shift+m exec --no-startup-id changesink && audiocast
+bindsym $mod+Ctrl+m exec --no-startup-id audiocast restart
 ```
 - [changesink](https://github.com/vilari-mickopf/dotfiles/blob/master/.config/i3/scripts/changesink) script
 
 
 ### Receiver
 
-Audiocast on receiver side should continuously wait on port for server's command:
+Audiocast on receiver side should continuously wait on port for server's command.
+Received commands will mirror the actions of the server, i.e. 'start'
+will load rtp-module if it's not already loaded, 'stop' will unload the module,
+and 'restart' will unload and then load the module.
 
 ```bash
 audiocast
@@ -89,15 +99,11 @@ Start with systemd instead:
 systemctl --user start audiocast
 ```
 
-To start on boot:
+Start automatically on login:
 
 ```bash
 systemctl --user enable audiocast
 ```
 
 _Note_: Use --user, because running pulseaudio in system wide mode is not advisable.
-Make sure that pulseaudio is running on both server and receiver sides:
-```bash
-systemctl --user start pulseaudio
-systemctl --user enable pulseaudio
-```
+Make sure that pulseaudio is running on both server and receiver sides.

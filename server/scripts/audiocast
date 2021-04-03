@@ -13,7 +13,7 @@ if [[ $# -eq 0 ]]; then
                                 | grep index \
                                 | awk 'NF>1{print $NF}')
 
-    [[ $current_sink == $rtp_sink ]] && command=start || command=stop
+    [[ $current_sink == $rtp_sink ]] && command=start || exit
 fi
 
 conf_dir=${XDG_CONFIG_HOME:-$HOME/.config}
@@ -35,7 +35,7 @@ route=$(ip route | sed '/default/d' | awk '{print $1}')
 ip=$(cat $TMP_FILE)
 [[ -z $ip ]] && echo "Can\'t find ip addr" && exit
 
-valid=(start stop)
+valid=(start stop restart)
 (printf '%s\n' "${valid[@]}" | grep -xq $command) || exit
 
 echo $command | timeout 0.1 nc $ip $port
@@ -45,8 +45,8 @@ echo $command | timeout 0.1 nc $ip $port
 module=$(pactl list short modules | grep 'module-rtp-send\ssource=rtp\.monitor' \
                                   | awk '{print $1}')
 
-for m in $module; do
-    pactl unload-module $m
-done
+[[ $command == 'restart' || $command == 'stop' ]] && \
+    for m in $module; do pactl unload-module $m; done
 
-[[ $command == 'start' ]] && pactl load-module module-rtp-send source=rtp.monitor
+[[ ($command == 'start' && -z $module) || $command == 'restart' ]] && \
+    pactl load-module module-rtp-send source=rtp.monitor
