@@ -22,11 +22,11 @@ conf_dir=${XDG_CONFIG_HOME:-$HOME/.config}
 mkdir -p $conf_dir/audiocast
 cp $1/config/* $conf_dir/audiocast
 
-if [[ $1 == server ]]; then
+if [[ $1 == 'server' ]]; then
     default_pulse_conf=$conf_dir/pulse/default.pa
     [[ ! -f $default_pulse_conf ]] && default_pulse_conf=/etc/pulse/default.pa
 
-    pulse_conf='load-module module-null-sink sink_name=rtp'
+    pulse_conf="load-module module-null-sink sink_name=rtp format=s16le rate=48000 channels=2 sink_properties=\"device.description='RTP Multicast Sink'\""
     [[ -z $(cat $default_pulse_conf | grep "^$pulse_conf") ]] && { \
         [[ $default_pulse_conf == /etc/pulse/default.pa ]] && \
             sudo echo $pulse_conf >> $default_pulse_conf || \
@@ -34,7 +34,7 @@ if [[ $1 == server ]]; then
 
     systemctl --user restart pulseaudio
 
-elif [[ $1 == receiver ]]; then
+elif [[ $1 == 'receiver' ]]; then
     sudo cp receiver/systemd/* /etc/systemd/user
     systemctl --user daemon-reload
 fi
