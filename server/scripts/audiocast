@@ -26,11 +26,28 @@ ip=$(cat $TMP_FILE)
 ping -c 1 -W 0.1 $ip &>/dev/null
 [[ $? != 0 ]] && echo "Can't ping cached ip. Looking for port $port" && \
     [[ -f $TMP_FILE ]] && rm $TMP_FILE
-route=$(ip route | sed '/default/d' | awk '{print $1}')
-[[ ! -s $TMP_FILE ]] && nmap $route -p$port --open -oG - \
-                            | awk "/Ports: $port\/open/{print \$2}" \
-                            | awk '{print $1}' > $TMP_FILE
-[[ ! -s $TMP_FILE ]] && "Can't find port ip addr with port $port." && exit
+
+if [[ ! -s $TMP_FILE ]]; then
+    devices=()
+    for dev in `ls /sys/class/net`; do
+        if [[ -d /sys/class/net/$dev/device ]]; then
+            echo "Checking route for device $dev"
+            route=$(ip route | grep $dev | sed '/default/d' | awk '{print $1}')
+            [[ -z $route ]] && echo "Route not found. Skipping." && echo && continue
+            echo "Ip route: $route"
+
+            echo "Checking port $port"
+            timeout 5 nmap $route -p$port --open -oG - \
+                    | awk "/Ports: $port\/open/{print \$2}" \
+                    | awk '{print $1}' > $TMP_FILE
+
+            [[ -s $TMP_FILE ]] && echo "Port found at ip $(cat $TMP_FILE)" && break
+            echo
+        fi
+    done
+fi
+
+[[ ! -s $TMP_FILE ]] && echo "Can't find port ip addr with port $port" && exit
 
 ip=$(cat $TMP_FILE)
 [[ -z $ip ]] && echo "Can\'t find ip addr" && exit
@@ -38,6 +55,7 @@ ip=$(cat $TMP_FILE)
 valid=(start stop restart)
 (printf '%s\n' "${valid[@]}" | grep -xq $command) || exit
 
+echo "Sending $command command to receiver"
 echo $command | timeout 0.1 nc $ip $port
 [[ $? == 1 ]] && echo "Command not successfully sent to the receiver." && \
     command=stop && [[ -f $TMP_FILE ]] && rm $TMP_FILE
@@ -46,7 +64,7 @@ module=$(pactl list short modules | grep 'module-rtp-send\ssource=rtp\.monitor' 
                                   | awk '{print $1}')
 
 [[ $command == 'restart' || $command == 'stop' ]] && \
-    for m in $module; do pactl unload-module $m; done
+    for m in $module; do echo "Unload moudle $m" && pactl unload-module $m; done
 
 [[ ($command == 'start' && -z $module) || $command == 'restart' ]] && \
-    pactl load-module module-rtp-send source=rtp.monitor
+    echo "Load rtp-module" && pactl load-module module-rtp-send source=rtp.monitor > /dev/null
