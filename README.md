@@ -37,17 +37,6 @@ Receiver argument will only install audiocast receiver script
 ./install receiver
 ```
 
-## Configuration
-
-Port used for communication between server and receiver can be found in
-$XDG_CONFIG_HOME/audiocast/config file.
-
-```ini
-port=5212
-```
-
-Use same 'port' value on server and receiver side
-
 # Usage
 
 ## Server

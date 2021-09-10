@@ -1,4 +1,0 @@
-# Audiocast script will detect the ip address by looking for opened port that's
-# set in 'port' option, so it's advised to set the port that is not known
-# to be used by any other application like ports between 5000 and 5500.
-port=5212

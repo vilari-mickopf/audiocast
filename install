@@ -4,11 +4,11 @@ help() {
     echo "install, installing audiocast on server/receiver."
     echo
     echo "Basic usage:"
-    echo "install [options]"
+    echo "install [option]"
     echo
     echo "Options:"
-    echo "  server      install on server"
-    echo "  receiver    install on receiver"
+    echo "  server      installation for server (rtp-send)"
+    echo "  receiver    installation for receiver (rtp-recv)"
 }
 
 [[ $# -eq 0 || $# -gt 1 ]] && help && exit
@@ -16,13 +16,13 @@ help() {
 valid=(server receiver)
 (printf '%s\n' "${valid[@]}" | grep -xq $1) || { help && exit; }
 
-sudo cp $1/scripts/* /usr/bin
-
-conf_dir=${XDG_CONFIG_HOME:-$HOME/.config}
-mkdir -p $conf_dir/audiocast
-cp $1/config/* $conf_dir/audiocast
+sudo cp $1/audiocast /usr/bin
 
 if [[ $1 == 'server' ]]; then
+    cache_dir=${XDG_CACHE_HOME:-$HOME/.cache}/audiocast
+    mkdir -p $cache_dir
+
+    conf_dir=${XDG_CONFIG_HOME:-$HOME/.config}
     default_pulse_conf=$conf_dir/pulse/default.pa
     [[ ! -f $default_pulse_conf ]] && default_pulse_conf=/etc/pulse/default.pa
 
@@ -35,7 +35,7 @@ if [[ $1 == 'server' ]]; then
     systemctl --user restart pulseaudio
 
 elif [[ $1 == 'receiver' ]]; then
-    sudo cp receiver/systemd/* /etc/systemd/user
+    sudo cp receiver/audiocast.service /etc/systemd/user
     systemctl --user daemon-reload
 fi
 

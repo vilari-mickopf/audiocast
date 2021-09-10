@@ -16,17 +16,21 @@ if [[ $# -eq 0 ]]; then
     [[ $current_sink == $rtp_sink ]] && command=start || exit
 fi
 
-conf_dir=${XDG_CONFIG_HOME:-$HOME/.config}
-CONF=$conf_dir/audiocast/config
-TMP_FILE=$conf_dir/audiocast/.cache
+cache_dir=${XDG_CACHE_HOME:-$HOME/.cache}/audiocast
+[[ ! -d $cache_dir ]] && mkdir -p $cache_dir
+
+TMP_FILE=$cache_dir/ip
 [[ ! -f $TMP_FILE ]] && touch $TMP_FILE
 
-port=$(cat $CONF | grep "^port" | cut -d= -f2 | tail -n1)
 ip=$(cat $TMP_FILE)
+PORT=5212
+
+# Check ip
 ping -c 1 -W 1 $ip &>/dev/null
-[[ $? != 0 ]] && echo "Can't ping cached ip. Looking for port $port" && \
+[[ $? != 0 ]] && echo "Can't ping cached ip. Looking for port $PORT" && \
     [[ -f $TMP_FILE ]] && rm $TMP_FILE
 
+#
 if [[ ! -s $TMP_FILE ]]; then
     devices=()
     for dev in `ls /sys/class/net`; do
@@ -36,9 +40,9 @@ if [[ ! -s $TMP_FILE ]]; then
             [[ -z $route ]] && echo "Route not found. Skipping." && echo && continue
             echo "Ip route: $route"
 
-            echo "Checking port $port"
-            timeout 10 nmap $route -p$port --open -oG - \
-                    | awk "/Ports: $port\/open/{print \$2}" \
+            echo "Checking port $PORT"
+            timeout 10 nmap $route -p$PORT --open -oG - \
+                    | awk "/Ports: $PORT\/open/{print \$2}" \
                     | awk '{print $1}' > $TMP_FILE
 
             [[ -s $TMP_FILE ]] && echo "Port found at ip $(cat $TMP_FILE)" && break
@@ -47,7 +51,7 @@ if [[ ! -s $TMP_FILE ]]; then
     done
 fi
 
-[[ ! -s $TMP_FILE ]] && echo "Can't find port ip addr with port $port" && exit
+[[ ! -s $TMP_FILE ]] && echo "Can't find port ip addr with port $PORT" && exit
 
 ip=$(cat $TMP_FILE)
 [[ -z $ip ]] && echo "Can\'t find ip addr" && exit
@@ -56,7 +60,7 @@ valid=(start stop restart)
 (printf '%s\n' "${valid[@]}" | grep -xq $command) || exit
 
 echo "Sending $command command to receiver"
-echo $command | timeout 0.1 nc $ip $port
+echo $command | timeout 0.1 nc $ip $PORT
 [[ $? == 1 ]] && echo "Command not successfully sent to the receiver." && \
     command=stop && [[ -f $TMP_FILE ]] && rm $TMP_FILE
 

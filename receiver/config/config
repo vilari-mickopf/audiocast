@@ -1,2 +1,0 @@
-# Port is used to recieve commands from server for starting and stopping the streams.
-port=5212
